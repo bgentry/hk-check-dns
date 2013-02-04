@@ -38,23 +38,20 @@ func DNSHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	domainname = dns.Fqdn(domainname)
-	subdomains := strings.Split(strings.TrimRight(domainname, "."), ".")
 
-	rootns, err := getRootSOA(subdomains[len(subdomains)-1])
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error getting root SOA: %q", err.Error()), 500)
-		return
+	nocache := req.URL.Query().Get("nocache") != ""
+
+	var lastns string
+
+	if nocache {
+		lastns, err = getAuthoritativeNS(domainname)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error getting authoritative NS: %q", err.Error()), 500)
+			return
+		}
+	} else {
+		lastns = rootConfig.Servers[0]
 	}
-
-	fmt.Printf("Root NS: %q\n", rootns)
-
-	lastns, err := RecursiveNS(domainname)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error during RecursiveNS: %q", err.Error()), 500)
-		return
-	}
-
-	fmt.Println("LAST NS:", lastns)
 
 	c := &dns.Client{Net: "tcp"}
 
@@ -113,6 +110,14 @@ func GetCnameAndAFromMsg(m *dns.Msg, hostname string) (cnamelist []string, alist
 	return
 }
 
+func getAuthoritativeNS(domainname string) (string, error) {
+	lastns, err := RecursiveNS(domainname)
+	if err != nil {
+		return "", err
+	}
+	return lastns, nil
+}
+
 type CheckDNSResponse struct {
 	A      []string
 	CNAME  []string
@@ -136,32 +141,6 @@ func loadRootConfig() (err error) {
 		return err
 	}
 	return nil
-}
-
-func getRootSOA(suffix string) (string, error) {
-	c := &dns.Client{Net: "tcp"}
-	m := new(dns.Msg)
-	m.SetQuestion(dns.Fqdn(suffix), dns.TypeSOA)
-	fmt.Println("ROOT SERVERS:", rootConfig.Servers)
-	r, _, err := c.Exchange(m, rootConfig.Servers[0]+":"+rootConfig.Port)
-	if err != nil {
-		return "", err
-	}
-
-	if len(r.Answer) == 0 {
-		return "", fmt.Errorf("root SOA not found for %s", suffix)
-	}
-
-	// TODO: should loop through all answers, find all SOAs, and take a random one
-	soas := make([]string, 0)
-	if soa, ok := r.Answer[0].(*dns.SOA); ok {
-		soas = append(soas, soa.Ns)
-	}
-	if len(soas) == 0 {
-		return "", fmt.Errorf("not an SOA record")
-	}
-
-	return soas[rand.Intn(len(soas))], nil
 }
 
 func RecursiveNS(hostname string) (string, error) {
