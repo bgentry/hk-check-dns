@@ -145,7 +145,7 @@ func loadRootConfig() (err error) {
 
 func RecursiveNS(hostname string) (string, error) {
 	subdomains := strings.Split(dns.Fqdn(hostname), ".")
-	c := &dns.Client{Net: "tcp"}
+	c := &dns.Client{Net: "udp"}
 
 	return recurseNS(c, subdomains)
 }
