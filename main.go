@@ -3,11 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/miekg/dns"
 	"log"
 	"math/rand"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 )
@@ -18,7 +18,10 @@ func main() {
 		port = "5000"
 	}
 
-	http.HandleFunc("/", DNSHandler)
+	r := mux.NewRouter()
+	r.NotFoundHandler = http.HandlerFunc(NotFoundHandler)
+	r.HandleFunc("/lookup/{domain}", LookupHandler)
+	http.Handle("/", r)
 
 	err := loadRootConfig()
 	if err != nil {
@@ -31,17 +34,16 @@ func main() {
 	}
 }
 
-func DNSHandler(w http.ResponseWriter, req *http.Request) {
-	domainname, err := url.QueryUnescape(strings.Trim(req.URL.Path, "/"))
-	if err != nil {
-		http.Error(w, "Invalid domainname", 400)
-		return
-	}
-	domainname = dns.Fqdn(domainname)
+func NotFoundHandler(w http.ResponseWriter, req *http.Request) {
+	http.Error(w, "{\"error\": \"not found\"}", 404)
+}
 
+func LookupHandler(w http.ResponseWriter, req *http.Request) {
+	domainname := dns.Fqdn(mux.Vars(req)["domain"])
 	nocache := req.URL.Query().Get("nocache") != ""
 
 	var lastns string
+	var err error
 
 	if nocache {
 		lastns, err = getAuthoritativeNS(domainname)

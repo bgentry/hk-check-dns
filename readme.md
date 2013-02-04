@@ -1,13 +1,13 @@
 
-## Cache-free lookup of all A or CNAME records for a domain
+## Lookup of all A or CNAME records for a domain
 
 ```bash
-$ curl http://localhost:5000/www.cnn.co.uk
+$ curl http://localhost:5000/lookup/www.cnn.co.uk
 ```
 
 ```json
 {
-  "LastNS": "ns3.timewarner.net.",
+  "LastNS": "8.8.8.8",
   "CNAME": [
     "cnn.co.uk."
   ],
@@ -15,8 +15,10 @@ $ curl http://localhost:5000/www.cnn.co.uk
 }
 ```
 
+### Cache-free lookups
+
 ```bash
-$ curl http://localhost:5000/www.herokuapp.com
+$ curl http://localhost:5000/lookup/www.herokuapp.com?nocache=true
 ```
 
 ```json
@@ -31,7 +33,7 @@ $ curl http://localhost:5000/www.herokuapp.com
 ```
 
 ```bash
-$ curl http://localhost:5000/www.heroku.com
+$ curl http://localhost:5000/lookup/www.heroku.com?nocache=true
 ```
 
 ```json
