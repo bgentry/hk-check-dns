@@ -42,14 +42,23 @@ func LookupHandler(w http.ResponseWriter, req *http.Request) {
 	domainname := dns.Fqdn(mux.Vars(req)["domain"])
 	nocache := req.URL.Query().Get("nocache") != ""
 
+	cr, err := LookupDNS(domainname, nocache)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("{\"error\": %q}", err.Error()), 500)
+		return
+	}
+	json.NewEncoder(w).Encode(cr)
+	return
+}
+
+func LookupDNS(domainname string, nocache bool) (*CheckDNSResponse, error) {
 	var lastns string
 	var err error
 
 	if nocache {
 		lastns, err = getAuthoritativeNS(domainname)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("error getting authoritative NS: %q", err.Error()), 500)
-			return
+			return nil, fmt.Errorf("error getting authoritative NS: %q", err.Error())
 		}
 	} else {
 		lastns = rootConfig.Servers[0]
@@ -61,8 +70,7 @@ func LookupHandler(w http.ResponseWriter, req *http.Request) {
 	m.SetQuestion(domainname, dns.TypeANY)
 	r, _, err := c.Exchange(m, lastns+":53")
 	if err != nil {
-		http.Error(w, fmt.Sprintf("error getting ANY for %q: %q", domainname, err.Error()), 500)
-		return
+		return nil, fmt.Errorf("error getting ANY %q: %q", domainname, err.Error())
 	}
 
 	// TODO: need to filter out results for hostnames I'm not looking for
@@ -72,8 +80,7 @@ func LookupHandler(w http.ResponseWriter, req *http.Request) {
 	m.SetQuestion(domainname, dns.TypeA)
 	r, _, err = c.Exchange(m, lastns+":53")
 	if err != nil {
-		http.Error(w, fmt.Sprintf("error getting A for %q: %q", domainname, err.Error()), 500)
-		return
+		return nil, fmt.Errorf("error getting A for %q: %q", domainname, err.Error())
 	}
 
 	cnamelist2, alist2 := GetCnameAndAFromMsg(r, domainname)
@@ -84,12 +91,12 @@ func LookupHandler(w http.ResponseWriter, req *http.Request) {
 		alist = AppendIfMissing(alist, a)
 	}
 
-	json.NewEncoder(w).Encode(CheckDNSResponse{
+	cr := &CheckDNSResponse{
 		A:      alist,
 		CNAME:  cnamelist,
 		LastNS: lastns,
-	})
-	return
+	}
+	return cr, nil
 }
 
 func GetCnameAndAFromMsg(m *dns.Msg, hostname string) (cnamelist []string, alist []string) {
