@@ -92,8 +92,8 @@ func VerifyTargetHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	for a := range cr.A {
-		for a2 := range cr2.A {
+	for _, a := range cr.A {
+		for _, a2 := range cr2.A {
 			if a == a2 {
 				// ALIAS or static IP match
 				json.NewEncoder(w).Encode(VerifyResponse{
