@@ -65,10 +65,10 @@ func VerifyTargetHandler(w http.ResponseWriter, req *http.Request) {
 
 	if cr.CNAME == hostname2 {
 		// it's a direct CNAME, that makes it easy
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  "ok",
-			"code":    1,
-			"message": "direct CNAME match",
+		json.NewEncoder(w).Encode(VerifyResponse{
+			Status:  "ok",
+			Code:    1,
+			Message: "direct CNAME match",
 		})
 		return
 	}
@@ -82,10 +82,10 @@ func VerifyTargetHandler(w http.ResponseWriter, req *http.Request) {
 
 	if cr2.CNAME == hostname2 {
 		// indirect CNAME / CNAME chain
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  "warning",
-			"code":    3,
-			"message": "indirect CNAME / CNAME chain",
+		json.NewEncoder(w).Encode(VerifyResponse{
+			Status:  "warning",
+			Code:    3,
+			Message: "indirect CNAME / CNAME chain",
 		})
 		return
 	}
@@ -94,22 +94,28 @@ func VerifyTargetHandler(w http.ResponseWriter, req *http.Request) {
 		for a2 := range cr2.A {
 			if a == a2 {
 				// ALIAS or static IP match
-				json.NewEncoder(w).Encode(map[string]interface{}{
-					"status":  "warning",
-					"code":    2,
-					"message": "ALIAS or Static IP match",
+				json.NewEncoder(w).Encode(VerifyResponse{
+					Status:  "warning",
+					Code:    2,
+					Message: "ALIAS or Static IP match",
 				})
 				return
 			}
 		}
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":  "error",
-		"code":    0,
-		"message": "no matches",
+	json.NewEncoder(w).Encode(VerifyResponse{
+		Status:  "error",
+		Code:    0,
+		Message: "no matches",
 	})
 	return
+}
+
+type VerifyResponse struct {
+	Status  string `json:"status"`
+	Code    int    `json:"code"`
+	Message string `json:"message"`
 }
 
 func LookupDNS(domainname string, nocache bool) (*CheckDNSResponse, error) {
