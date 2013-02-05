@@ -9,7 +9,6 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"strings"
 )
 
 func main() {
@@ -128,7 +127,7 @@ func LookupDNS(domainname string, nocache bool) (*CheckDNSResponse, error) {
 	var err error
 
 	if nocache {
-		lastns, err = getAuthoritativeNS(domainname)
+		lastns, err = RecursiveNS(domainname)
 		if err != nil {
 			return nil, fmt.Errorf("error getting authoritative NS: %q", err.Error())
 		}
@@ -189,14 +188,6 @@ func GetCnameAndAFromMsg(m *dns.Msg, hostname string) (alist []string, cname str
 	return
 }
 
-func getAuthoritativeNS(domainname string) (string, error) {
-	lastns, err := RecursiveNS(domainname)
-	if err != nil {
-		return "", err
-	}
-	return lastns, nil
-}
-
 type CheckDNSResponse struct {
 	A      []string
 	CNAME  string
@@ -223,42 +214,39 @@ func loadRootConfig() (err error) {
 }
 
 func RecursiveNS(hostname string) (string, error) {
-	subdomains := strings.Split(dns.Fqdn(hostname), ".")
+	fulldomain := dns.Fqdn(hostname)
 	c := &dns.Client{Net: "udp"}
 
-	return recurseNS(c, subdomains)
+	labels := dns.SplitLabels(fulldomain)
+	return recurseNS(c, fulldomain, labels)
 }
 
-func recurseNS(c *dns.Client, subdomains []string) (string, error) {
+func recurseNS(c *dns.Client, fulldomain string, labels []string) (string, error) {
 	var lastns string
-	if len(subdomains) > 1 {
+	if len(labels) > 0 {
 		var err error
-		lastns, err = recurseNS(c, subdomains[1:])
+		lastns, err = recurseNS(c, fulldomain, labels[1:])
 		if err != nil {
-			fmt.Printf("ERROR WITH SUBDOMAINS %v: %s\n", subdomains, err.Error())
+			fmt.Printf("ERROR WITH LABELS %v: %s\n", labels, err.Error())
 			return "", err
 		}
 	} else {
 		return rootConfig.Servers[0], nil
 	}
 
-	domainname := dns.Fqdn(strings.Join(subdomains, "."))
-
 	m := new(dns.Msg)
-	m.SetQuestion(domainname, dns.TypeNS)
+	m.SetQuestion(fulldomain, dns.TypeA)
 	r, _, err := c.Exchange(m, lastns+":53")
 	if err != nil {
-		return "", fmt.Errorf("error getting NS for %q: %q", domainname, err.Error())
+		return "", fmt.Errorf("error getting NS for %q: %q", fulldomain, err.Error())
 	}
 
 	nslist := make([]string, 0)
-	if len(r.Answer) > 0 {
-		if ns, ok := r.Answer[0].(*dns.NS); ok {
-			nslist = append(nslist, ns.Ns)
-		}
-	} else if len(r.Ns) > 0 {
-		if ns, ok := r.Ns[0].(*dns.NS); ok {
-			nslist = append(nslist, ns.Ns)
+	if len(r.Ns) > 0 {
+		for i := range r.Ns {
+			if ns, ok := r.Ns[i].(*dns.NS); ok {
+				nslist = append(nslist, ns.Ns)
+			}
 		}
 	}
 
