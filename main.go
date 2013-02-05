@@ -21,6 +21,7 @@ func main() {
 	r := mux.NewRouter()
 	r.NotFoundHandler = http.HandlerFunc(NotFoundHandler)
 	r.HandleFunc("/lookup/{hostname}", LookupHandler)
+	r.HandleFunc("/verify_target/{hostname1}/{hostname2}", VerifyTargetHandler)
 	http.Handle("/", r)
 
 	err := loadRootConfig()
@@ -48,6 +49,66 @@ func LookupHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(cr)
+	return
+}
+
+func VerifyTargetHandler(w http.ResponseWriter, req *http.Request) {
+	hostname1 := dns.Fqdn(mux.Vars(req)["hostname1"])
+	hostname2 := dns.Fqdn(mux.Vars(req)["hostname2"])
+	nocache := req.URL.Query().Get("nocache") != ""
+
+	cr, err := LookupDNS(hostname1, nocache)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("{\"error\": %q, \"hostname\": %q}", err.Error(), hostname1), 500)
+		return
+	}
+
+	if cr.CNAME == hostname2 {
+		// it's a direct CNAME, that makes it easy
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "ok",
+			"code":    1,
+			"message": "direct CNAME match",
+		})
+		return
+	}
+
+	// else need to resolve hostname2
+	cr2, err := LookupDNS(hostname2, nocache)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("{\"error\": %q, \"hostname\": %q}", err.Error(), hostname2), 500)
+		return
+	}
+
+	if cr2.CNAME == hostname2 {
+		// indirect CNAME / CNAME chain
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "warning",
+			"code":    3,
+			"message": "indirect CNAME / CNAME chain",
+		})
+		return
+	}
+
+	for a := range cr.A {
+		for a2 := range cr2.A {
+			if a == a2 {
+				// ALIAS or static IP match
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"status":  "warning",
+					"code":    2,
+					"message": "ALIAS or Static IP match",
+				})
+				return
+			}
+		}
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  "error",
+		"code":    0,
+		"message": "no matches",
+	})
 	return
 }
 

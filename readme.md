@@ -45,3 +45,53 @@ $ curl http://localhost:5000/lookup/www.heroku.com?nocache=true
   "A": []
 }
 ```
+
+## Verify that one hostname targets another
+
+```bash
+$ curl http://localhost:5000/verify_target/www.rapgenius.com/proxy.heroku.com?nocache=true -s | jq '.'
+```
+
+```json
+{
+  "status": "ok",
+  "message": "direct CNAME match",
+  "code": 1
+}
+```
+
+```bash
+$ curl http://localhost:5000/verify_target/www.mwmanning.com/mattmanning.herokuapp.com?nocache=true -s | jq '.'
+```
+
+```json
+{
+  "status": "ok",
+  "message": "direct CNAME match",
+  "code": 1
+}
+```
+
+```bash
+$ curl http://localhost:5000/verify_target/mwmanning.com/mattmanning.herokuapp.com?nocache=true -s | jq '.'
+```
+
+```json
+{
+  "status": "warning",
+  "message": "ALIAS or Static IP match",
+  "code": 2
+}
+```
+
+```bash
+$ curl http://localhost:5000/verify_target/www.mwmanning.com/mattmanning.heroku.com?nocache=true -s | jq '.'
+```
+
+```json
+{
+  "status": "error",
+  "message": "no matches",
+  "code": 0
+}
+```
