@@ -54,9 +54,16 @@ $ curl http://localhost:5000/verify_target/www.rapgenius.com/proxy.heroku.com?no
 
 ```json
 {
-  "status": "ok",
+  "data": {
+    "www.rapgenius.com.": {
+      "LastNS": "ns39.domaincontrol.com.",
+      "CNAME": "proxy.heroku.com.",
+      "A": []
+    }
+  },
   "message": "direct CNAME match",
-  "code": 1
+  "code": 1,
+  "status": "ok"
 }
 ```
 
@@ -66,9 +73,16 @@ $ curl http://localhost:5000/verify_target/www.mwmanning.com/mattmanning.herokua
 
 ```json
 {
-  "status": "ok",
+  "data": {
+    "www.mwmanning.com.": {
+      "LastNS": "ns1.dnsimple.com.",
+      "CNAME": "mattmanning.herokuapp.com.",
+      "A": []
+    }
+  },
   "message": "direct CNAME match",
-  "code": 1
+  "code": 1,
+  "status": "ok"
 }
 ```
 
@@ -78,9 +92,26 @@ $ curl http://localhost:5000/verify_target/mwmanning.com/mattmanning.herokuapp.c
 
 ```json
 {
-  "status": "warning",
+  "data": {
+    "mwmanning.com.": {
+      "LastNS": "ns1.dnsimple.com.",
+      "CNAME": "",
+      "A": [
+        "54.243.97.145"
+      ]
+    },
+    "mattmanning.herokuapp.com.": {
+      "LastNS": "ns-662.awsdns-18.net.",
+      "CNAME": "",
+      "A": [
+        "23.23.231.180",
+        "184.72.248.52"
+      ]
+    }
+  },
   "message": "ALIAS or Static IP match",
-  "code": 2
+  "code": 2,
+  "status": "warning"
 }
 ```
 
@@ -90,8 +121,20 @@ $ curl http://localhost:5000/verify_target/www.mwmanning.com/mattmanning.heroku.
 
 ```json
 {
-  "status": "error",
+  "data": {
+    "www.mwmanning.com.": {
+      "LastNS": "ns1.dnsimple.com.",
+      "CNAME": "mattmanning.herokuapp.com.",
+      "A": []
+    },
+    "mattmanning.heroku.com.": {
+      "LastNS": "ns1.p19.dynect.net.",
+      "CNAME": "proxy.heroku.com.",
+      "A": []
+    }
+  },
   "message": "no matches",
-  "code": 0
+  "code": 0,
+  "status": "error"
 }
 ```

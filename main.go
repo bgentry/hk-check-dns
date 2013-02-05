@@ -69,6 +69,7 @@ func VerifyTargetHandler(w http.ResponseWriter, req *http.Request) {
 			Status:  "ok",
 			Code:    1,
 			Message: "direct CNAME match",
+			Data:    map[string]*CheckDNSResponse{hostname1: cr},
 		})
 		return
 	}
@@ -86,6 +87,7 @@ func VerifyTargetHandler(w http.ResponseWriter, req *http.Request) {
 			Status:  "warning",
 			Code:    3,
 			Message: "indirect CNAME / CNAME chain",
+			Data:    map[string]*CheckDNSResponse{hostname1: cr, hostname2: cr2},
 		})
 		return
 	}
@@ -98,6 +100,7 @@ func VerifyTargetHandler(w http.ResponseWriter, req *http.Request) {
 					Status:  "warning",
 					Code:    2,
 					Message: "ALIAS or Static IP match",
+					Data:    map[string]*CheckDNSResponse{hostname1: cr, hostname2: cr2},
 				})
 				return
 			}
@@ -108,14 +111,16 @@ func VerifyTargetHandler(w http.ResponseWriter, req *http.Request) {
 		Status:  "error",
 		Code:    0,
 		Message: "no matches",
+		Data:    map[string]*CheckDNSResponse{hostname1: cr, hostname2: cr2},
 	})
 	return
 }
 
 type VerifyResponse struct {
-	Status  string `json:"status"`
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+	Status  string                       `json:"status"`
+	Code    int                          `json:"code"`
+	Message string                       `json:"message"`
+	Data    map[string]*CheckDNSResponse `json:"data"`
 }
 
 func LookupDNS(domainname string, nocache bool) (*CheckDNSResponse, error) {
