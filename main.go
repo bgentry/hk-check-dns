@@ -221,6 +221,13 @@ func RecursiveNS(hostname string) (string, error) {
 	return recurseNS(c, fulldomain, labels)
 }
 
+var rootns = []string{
+	"a.root-servers.net", "b.root-servers.net", "c.root-servers.net",
+	"d.root-servers.net", "e.root-servers.net", "f.root-servers.net",
+	"g.root-servers.net", "h.root-servers.net", "i.root-servers.net",
+	"j.root-servers.net", "k.root-servers.net", "l.root-servers.net",
+	"m.root-servers.net"}
+
 func recurseNS(c *dns.Client, fulldomain string, labels []string) (string, error) {
 	var lastns string
 	if len(labels) > 0 {
@@ -231,7 +238,7 @@ func recurseNS(c *dns.Client, fulldomain string, labels []string) (string, error
 			return "", err
 		}
 	} else {
-		return rootConfig.Servers[0], nil
+		return rootns[rand.Intn(len(rootns))], nil
 	}
 
 	m := new(dns.Msg)
