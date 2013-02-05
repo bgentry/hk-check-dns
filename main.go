@@ -20,7 +20,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.NotFoundHandler = http.HandlerFunc(NotFoundHandler)
-	r.HandleFunc("/lookup/{domain}", LookupHandler)
+	r.HandleFunc("/lookup/{hostname}", LookupHandler)
 	http.Handle("/", r)
 
 	err := loadRootConfig()
@@ -39,7 +39,7 @@ func NotFoundHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func LookupHandler(w http.ResponseWriter, req *http.Request) {
-	domainname := dns.Fqdn(mux.Vars(req)["domain"])
+	domainname := dns.Fqdn(mux.Vars(req)["hostname"])
 	nocache := req.URL.Query().Get("nocache") != ""
 
 	cr, err := LookupDNS(domainname, nocache)
@@ -73,8 +73,7 @@ func LookupDNS(domainname string, nocache bool) (*CheckDNSResponse, error) {
 		return nil, fmt.Errorf("error getting ANY %q: %q", domainname, err.Error())
 	}
 
-	// TODO: need to filter out results for hostnames I'm not looking for
-	cnamelist, alist := GetCnameAndAFromMsg(r, domainname)
+	alist, cname := GetCnameAndAFromMsg(r, domainname)
 
 	m = new(dns.Msg)
 	m.SetQuestion(domainname, dns.TypeA)
@@ -83,9 +82,9 @@ func LookupDNS(domainname string, nocache bool) (*CheckDNSResponse, error) {
 		return nil, fmt.Errorf("error getting A for %q: %q", domainname, err.Error())
 	}
 
-	cnamelist2, alist2 := GetCnameAndAFromMsg(r, domainname)
-	for _, c := range cnamelist2 {
-		cnamelist = AppendIfMissing(cnamelist, c)
+	alist2, cname2 := GetCnameAndAFromMsg(r, domainname)
+	if cname == "" {
+		cname = cname2
 	}
 	for _, a := range alist2 {
 		alist = AppendIfMissing(alist, a)
@@ -93,14 +92,13 @@ func LookupDNS(domainname string, nocache bool) (*CheckDNSResponse, error) {
 
 	cr := &CheckDNSResponse{
 		A:      alist,
-		CNAME:  cnamelist,
+		CNAME:  cname,
 		LastNS: lastns,
 	}
 	return cr, nil
 }
 
-func GetCnameAndAFromMsg(m *dns.Msg, hostname string) (cnamelist []string, alist []string) {
-	cnamelist = make([]string, 0)
+func GetCnameAndAFromMsg(m *dns.Msg, hostname string) (alist []string, cname string) {
 	alist = make([]string, 0)
 
 	if len(m.Answer) > 0 {
@@ -109,9 +107,9 @@ func GetCnameAndAFromMsg(m *dns.Msg, hostname string) (cnamelist []string, alist
 				if a.Hdr.Name == hostname {
 					alist = AppendIfMissing(alist, a.A.String())
 				}
-			} else if cname, ok := rec.(*dns.CNAME); ok {
-				if cname.Hdr.Name == hostname {
-					cnamelist = AppendIfMissing(cnamelist, cname.Target)
+			} else if cn, ok := rec.(*dns.CNAME); ok {
+				if cn.Hdr.Name == hostname && cname == "" {
+					cname = cn.Target
 				}
 			}
 		}
@@ -129,7 +127,7 @@ func getAuthoritativeNS(domainname string) (string, error) {
 
 type CheckDNSResponse struct {
 	A      []string
-	CNAME  []string
+	CNAME  string
 	LastNS string
 }
 
