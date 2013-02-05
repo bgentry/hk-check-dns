@@ -138,3 +138,55 @@ $ curl http://localhost:5000/verify_target/www.mwmanning.com/mattmanning.heroku.
   "status": "error"
 }
 ```
+
+### Include a `target_alias`
+
+This lets the resolver know that the target record is an ALIAS record, and lets
+it compare against the ALIAS target's IPs / A records rather than those returned
+by the target itself.
+
+```bash
+$ curl "http://localhost:5000/verify_target/mwmanning.com/mattmanning.herokuapp.com?nocache=true&target_alias=argon-stack-12345.us-east-1.elb.amazonaws.com" -s | jq '.'
+```
+
+```json
+{
+  "data": {
+    "mwmanning.com.": {
+      "LastNS": "ns4.dnsimple.com.",
+      "CNAME": "",
+      "A": [
+        "50.19.249.227",
+        "54.243.85.64"
+      ]
+    },
+    "argon-stack-12345.us-east-1.elb.amazonaws.com.": {
+      "LastNS": "ns-947.amazonaws.com.",
+      "CNAME": "",
+      "A": [
+        "107.20.162.205",
+        "54.243.194.238",
+        "23.23.231.180",
+        "23.23.204.240",
+        "184.72.248.52",
+        "50.19.249.227",
+        "184.73.167.111",
+        "54.243.90.245",
+        "50.19.86.241",
+        "54.243.85.64",
+        "54.243.92.108",
+        "107.22.226.64",
+        "54.243.97.145",
+        "23.21.239.236",
+        "50.19.92.116",
+        "107.20.236.186",
+        "23.21.162.250",
+        "23.23.113.171"
+      ]
+    }
+  },
+  "message": "ALIAS or Static IP match",
+  "code": 2,
+  "status": "warning"
+}
+```

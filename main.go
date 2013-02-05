@@ -56,6 +56,11 @@ func VerifyTargetHandler(w http.ResponseWriter, req *http.Request) {
 	hostname2 := dns.Fqdn(mux.Vars(req)["hostname2"])
 	nocache := req.URL.Query().Get("nocache") != ""
 
+	target_alias := req.URL.Query().Get("target_alias")
+	if target_alias != "" {
+		target_alias = dns.Fqdn(target_alias)
+	}
+
 	cr, err := LookupDNS(hostname1, nocache)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("{\"error\": %q, \"hostname\": %q}", err.Error(), hostname1), 500)
@@ -73,21 +78,16 @@ func VerifyTargetHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// else need to resolve hostname2
-	cr2, err := LookupDNS(hostname2, nocache)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("{\"error\": %q, \"hostname\": %q}", err.Error(), hostname2), 500)
-		return
+	// Since it's not a direct CNAME, we need to resolve the A records of either
+	// target_alias or hostname2
+	target_host := hostname2
+	if target_alias != "" {
+		target_host = target_alias
 	}
 
-	if cr2.CNAME == hostname2 {
-		// indirect CNAME / CNAME chain
-		json.NewEncoder(w).Encode(VerifyResponse{
-			Status:  "warning",
-			Code:    3,
-			Message: "indirect CNAME / CNAME chain",
-			Data:    map[string]*CheckDNSResponse{hostname1: cr, hostname2: cr2},
-		})
+	cr2, err := LookupDNS(target_host, nocache)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("{\"error\": %q, \"hostname\": %q}", err.Error(), target_host), 500)
 		return
 	}
 
@@ -99,7 +99,7 @@ func VerifyTargetHandler(w http.ResponseWriter, req *http.Request) {
 					Status:  "warning",
 					Code:    2,
 					Message: "ALIAS or Static IP match",
-					Data:    map[string]*CheckDNSResponse{hostname1: cr, hostname2: cr2},
+					Data:    map[string]*CheckDNSResponse{hostname1: cr, target_host: cr2},
 				})
 				return
 			}
