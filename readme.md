@@ -135,7 +135,7 @@ $ curl http://localhost:5000/verify_target/www.mwmanning.com/mattmanning.heroku.
   },
   "message": "no matches",
   "code": 0,
-  "status": "error"
+  "status": "no_match"
 }
 ```
 
