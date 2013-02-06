@@ -21,8 +21,9 @@ func main() {
 
 	r := mux.NewRouter()
 	r.NotFoundHandler = http.HandlerFunc(NotFoundHandler)
-	r.HandleFunc("/lookup/{hostname}", LookupHandler)
-	r.HandleFunc("/verify_target/{hostname1}/{hostname2}", VerifyTargetHandler)
+	r.HandleFunc("/lookup/{hostname}", LookupHandler).Methods("GET")
+	r.HandleFunc("/verify_target/{hostname1}/{hostname2}", VerifyTargetHandler).
+		Methods("GET")
 	http.Handle("/", r)
 
 	err := loadRootConfig()
