@@ -11,7 +11,7 @@ type VerifyResponse struct {
 	Code    int                          `json:"code"`
 	Message string                       `json:"message"`
 	Data    map[string]*CheckDNSResponse `json:"data"`
-	Error   LookupError                  `json:"error,omitempty"`
+	Error   *LookupError                 `json:"error,omitempty"`
 }
 
 type LookupError struct {
@@ -22,7 +22,7 @@ type LookupError struct {
 func VerifyTarget(host1, host2, target_alias string, nocache bool) (VerifyResponse, error) {
 	cr, err := LookupDNS(host1, nocache)
 	if err != nil {
-		return VerifyResponse{Error: LookupError{
+		return VerifyResponse{Error: &LookupError{
 			Error:    err.Error(),
 			Hostname: host1,
 		}}, err
@@ -47,7 +47,7 @@ func VerifyTarget(host1, host2, target_alias string, nocache bool) (VerifyRespon
 
 	cr2, err := LookupDNS(target_host, nocache)
 	if err != nil {
-		return VerifyResponse{Error: LookupError{
+		return VerifyResponse{Error: &LookupError{
 			Error:    err.Error(),
 			Hostname: target_host,
 		}}, err
