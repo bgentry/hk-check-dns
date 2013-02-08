@@ -87,35 +87,6 @@ $ curl http://localhost:5000/verify_target/www.mwmanning.com/mattmanning.herokua
 ```
 
 ```bash
-$ curl http://localhost:5000/verify_target/mwmanning.com/mattmanning.herokuapp.com?nocache=true -s | jq '.'
-```
-
-```json
-{
-  "data": {
-    "mwmanning.com.": {
-      "LastNS": "ns1.dnsimple.com.",
-      "CNAME": "",
-      "A": [
-        "54.243.97.145"
-      ]
-    },
-    "mattmanning.herokuapp.com.": {
-      "LastNS": "ns-662.awsdns-18.net.",
-      "CNAME": "",
-      "A": [
-        "23.23.231.180",
-        "184.72.248.52"
-      ]
-    }
-  },
-  "message": "ALIAS or Static IP match",
-  "code": 2,
-  "status": "warning"
-}
-```
-
-```bash
 $ curl http://localhost:5000/verify_target/www.mwmanning.com/mattmanning.heroku.com?nocache=true -s | jq '.'
 ```
 
